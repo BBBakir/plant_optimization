@@ -1,0 +1,552 @@
+GAMS 37.1.0  r07954d5 Released Nov 11, 2021 WEX-WEI x86 64bit/MS Windows - 02/08/22 03:04:32 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  sets
+   2  i indice of months /June,July,August,September,October/
+   3  j indice of coal type /Coal_Stockpile, Coal_Columbian, Coal_Russian, Coal_Scottish, Wood_chips/
+   4  k indice of periods /Weekday_Peak, Weekday_Offpeak, Weekend_Peak, Weekend_Offpeak/
+   5  m indice of Day type/Weekday,Weekend/
+   6  k1(k) /Weekday_Peak, Weekday_Offpeak/
+   7  k2(k) /Weekend_Peak, Weekend_Offpeak/
+   8  j1(j)/Coal_Columbian, Coal_Russian, Coal_Scottish/
+   9  ;
+  10   
+  11  scalar
+  12  N Pound-Euro Exchange Rate /1.5/
+  13  G MWh energy per calorie / 0.278 /
+  14  L Stockpile Stock Left/600000/
+  15  T Transmission rate/0.65/
+  16  B Leftsulphure bubble/9000/
+  17  R Supplement /45/
+  18  U Plant capacity/12000/
+  19  D CO2 Emmision Rate/0.8/
+  20  O CO2 Emission Price/15/
+  21  ;
+  22   
+  23  parameters
+  24  W(j) Cost of fuel
+  25  /Coal_Stockpile 42.56
+  26   Coal_Columbian 43.93
+  27   Coal_Russian 43.80
+  28   Coal_Scottish 42.00
+  29   Wood_chips 73.77/
+  30   
+  31  C(j) `
+  32  /Coal_Stockpile 25.81
+  33   Coal_Columbian 25.12
+  34   Coal_Russian 24.50
+  35   Coal_Scottish 26.20
+  36   Wood_chips 18.00/
+  37   
+  38  S(j) Sulfur percentage of fuel
+  39  /Coal_Stockpile 0.0138
+  40   Coal_Columbian 0.007
+  41   Coal_Russian 0.0035
+  42   Coal_Scottish 0.0172
+  43   Wood_chips 0.0001/
+  44   
+  45  H(j) efficiency of fuels
+  46  /Coal_Stockpile 0.35
+  47   Coal_Columbian 0.35
+  48   Coal_Russian 0.35
+  49   Coal_Scottish 0.35
+  50   Wood_chips 0.035/
+  51   ;
+  52   
+  53  table P(k,i) Price at Month i and Period k
+  54                    June         July          August       September       October
+  55  Weekday_Peak       36.00        36.35         37.65          38.35          43.70
+  56  Weekday_Offpeak    27.00        27.00         28.20          28.50          31.70
+  57  Weekend_Peak       33.50        34.30         35.65          35.80          38.70
+  58  Weekend_Offpeak    26.20        26.30         27.50          27.65          30.10
+  59  ;
+  60   
+  61  table E(k,i) weekdays or weekends in month k
+  62                      June         July          August       September       October
+  63  Weekday_Peak        22           21              23         22              21
+  64  Weekday_Offpeak     22           21              23         22              21
+  65  Weekend_Peak        8            10              8          8               10
+  66  Weekend_Offpeak     8            10              8          8               10
+  67  ;
+  68   
+  69  nonnegative variables
+  70  x(i,j,k) amount of fuel burned in month i type j in all periods k
+  71   
+  72  variables
+  73  z total profit
+  74  F1 Co2
+  75  F2 Electricity
+  76  F3 costfuel
+  77  F4 transmission
+  78  F5 rocsupp
+  79  ;
+  80   
+  81  equations
+  82  Obj define objective function
+  83  Co2
+  84  Electricity
+  85  costfuel
+  86  transmission
+  87  rocsupp
+  88  SulphurBubble define constraint for sulfur bubble
+  89  Stockpile  define constraint for stockpile
+  90  firstmonths1
+  91  Plantcapacity plant capacity constraintsasas
+  92  ;
+  93   
+  94  Co2.. F1=e= sum((i,j,k),x(i,j,k)*H(j)*C(j)*G*D*O/N);
+  95  Electricity.. F2=e= sum((i,j,k),x(i,j,k)*H(j)*C(j)*G*P(k,i));
+  96  costfuel.. F3=e= sum((i,j,k),x(i,j,k)*W(j));
+  97  transmission.. F4=e= sum((i,j,k),x(i,j,k)*C(j)*H(j)*G*T);
+  98  rocsupp.. F5=e= sum((i,k),x(i,'Wood_chips',k)*H('Wood_chips')*C('Wood_chips')*G*R);
+  99  Obj.. Z=e=F2+F5-F4-F3-F1;
+ 100  *F2= electric satisi geliri F3=komur fiyati cost - co2 emissionu cezasi -transmission rate parasi + roc destegi
+ 101   
+ 102   
+ 103  SulphurBubble.. sum((i,j,k),X(i,j,k)*S(j)) =l= 9000;
+ 104  Stockpile.. sum((i,k),X(i,'Coal_Stockpile',k)) =l= 600000;
+ 105  firstmonths1(i,j1,k)$((ord(i))<=3).. X(i,j1,k)=e= 0;
+ 106  Plantcapacity(i,k).. sum(j,x(i,j,k)*H(j)*C(j)*G)=l=(U)*E(k,i);
+ 107   
+ 108   
+ 109  model profitfunction/all/;
+ 110  solve profitfunction using lp maximizing Z;
+ 111  display X.l, z.l;
+
+
+COMPILATION TIME     =        0.000 SECONDS      3 MB  37.1.0 r07954d5 WEX-WEI
+GAMS 37.1.0  r07954d5 Released Nov 11, 2021 WEX-WEI x86 64bit/MS Windows - 02/08/22 03:04:32 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE profitfunction Using LP From line 110
+
+
+---- Obj  =E=  define objective function
+
+Obj..  z + F1 - F2 + F3 + F4 - F5 =E= 0 ; (LHS = 0)
+     
+
+---- Co2  =E=  
+
+Co2..  - 20.090504*x(June,Coal_Stockpile,Weekday_Peak) - 20.090504*x(June,Coal_Stockpile,Weekday_Offpeak) - 20.090504*x(June,Coal_Stockpile,Weekend_Peak) - 20.090504*x(June,Coal_Stockpile,Weekend_Offpeak) - 19.553408*x(June,Coal_Columbian,Weekday_Peak) - 19.553408*x(June,Coal_Columbian,Weekday_Offpeak) - 19.553408*x(June,Coal_Columbian,Weekend_Peak) - 19.553408*x(June,Coal_Columbian,Weekend_Offpeak) - 19.0708*x(June,Coal_Russian,Weekday_Peak) - 19.0708*x(June,Coal_Russian,Weekday_Offpeak) - 19.0708*x(June,Coal_Russian,Weekend_Peak) - 19.0708*x(June,Coal_Russian,Weekend_Offpeak) - 20.39408*x(June,Coal_Scottish,Weekday_Peak) - 20.39408*x(June,Coal_Scottish,Weekday_Offpeak) - 20.39408*x(June,Coal_Scottish,Weekend_Peak) - 20.39408*x(June,Coal_Scottish,Weekend_Offpeak) - 1.40112*x(June,Wood_chips,Weekday_Peak) - 1.40112*x(June,Wood_chips,Weekday_Offpeak) - 1.40112*x(June,Wood_chips,Weekend_Peak) - 1.40112*x(June,Wood_chips,Weekend_Offpeak) - 20.090504*x(July,Coal_Stockpile,Weekday_Peak) - 20.090504*x(July,Coal_Stockpile,Weekday_Offpeak) - 20.090504*x(July,Coal_Stockpile,Weekend_Peak) - 20.090504*x(July,Coal_Stockpile,Weekend_Offpeak) - 19.553408*x(July,Coal_Columbian,Weekday_Peak) - 19.553408*x(July,Coal_Columbian,Weekday_Offpeak) - 19.553408*x(July,Coal_Columbian,Weekend_Peak) - 19.553408*x(July,Coal_Columbian,Weekend_Offpeak) - 19.0708*x(July,Coal_Russian,Weekday_Peak) - 19.0708*x(July,Coal_Russian,Weekday_Offpeak) - 19.0708*x(July,Coal_Russian,Weekend_Peak) - 19.0708*x(July,Coal_Russian,Weekend_Offpeak) - 20.39408*x(July,Coal_Scottish,Weekday_Peak) - 20.39408*x(July,Coal_Scottish,Weekday_Offpeak) - 20.39408*x(July,Coal_Scottish,Weekend_Peak) - 20.39408*x(July,Coal_Scottish,Weekend_Offpeak) - 1.40112*x(July,Wood_chips,Weekday_Peak) - 1.40112*x(July,Wood_chips,Weekday_Offpeak) - 1.40112*x(July,Wood_chips,Weekend_Peak) - 1.40112*x(July,Wood_chips,Weekend_Offpeak) - 20.090504*x(August,Coal_Stockpile,Weekday_Peak) - 20.090504*x(August,Coal_Stockpile,Weekday_Offpeak) - 20.090504*x(August,Coal_Stockpile,Weekend_Peak) - 20.090504*x(August,Coal_Stockpile,Weekend_Offpeak) - 19.553408*x(August,Coal_Columbian,Weekday_Peak) - 19.553408*x(August,Coal_Columbian,Weekday_Offpeak) - 19.553408*x(August,Coal_Columbian,Weekend_Peak) - 19.553408*x(August,Coal_Columbian,Weekend_Offpeak) - 19.0708*x(August,Coal_Russian,Weekday_Peak) - 19.0708*x(August,Coal_Russian,Weekday_Offpeak) - 19.0708*x(August,Coal_Russian,Weekend_Peak) - 19.0708*x(August,Coal_Russian,Weekend_Offpeak) - 20.39408*x(August,Coal_Scottish,Weekday_Peak) - 20.39408*x(August,Coal_Scottish,Weekday_Offpeak) - 20.39408*x(August,Coal_Scottish,Weekend_Peak) - 20.39408*x(August,Coal_Scottish,Weekend_Offpeak) - 1.40112*x(August,Wood_chips,Weekday_Peak) - 1.40112*x(August,Wood_chips,Weekday_Offpeak) - 1.40112*x(August,Wood_chips,Weekend_Peak) - 1.40112*x(August,Wood_chips,Weekend_Offpeak) - 20.090504*x(September,Coal_Stockpile,Weekday_Peak) - 20.090504*x(September,Coal_Stockpile,Weekday_Offpeak) - 20.090504*x(September,Coal_Stockpile,Weekend_Peak) - 20.090504*x(September,Coal_Stockpile,Weekend_Offpeak) - 19.553408*x(September,Coal_Columbian,Weekday_Peak) - 19.553408*x(September,Coal_Columbian,Weekday_Offpeak) - 19.553408*x(September,Coal_Columbian,Weekend_Peak) - 19.553408*x(September,Coal_Columbian,Weekend_Offpeak) - 19.0708*x(September,Coal_Russian,Weekday_Peak) - 19.0708*x(September,Coal_Russian,Weekday_Offpeak) - 19.0708*x(September,Coal_Russian,Weekend_Peak) - 19.0708*x(September,Coal_Russian,Weekend_Offpeak) - 20.39408*x(September,Coal_Scottish,Weekday_Peak) - 20.39408*x(September,Coal_Scottish,Weekday_Offpeak) - 20.39408*x(September,Coal_Scottish,Weekend_Peak) - 20.39408*x(September,Coal_Scottish,Weekend_Offpeak) - 1.40112*x(September,Wood_chips,Weekday_Peak) - 1.40112*x(September,Wood_chips,Weekday_Offpeak) - 1.40112*x(September,Wood_chips,Weekend_Peak) - 1.40112*x(September,Wood_chips,Weekend_Offpeak) - 20.090504*x(October,Coal_Stockpile,Weekday_Peak) - 20.090504*x(October,Coal_Stockpile,Weekday_Offpeak) - 20.090504*x(October,Coal_Stockpile,Weekend_Peak) - 20.090504*x(October,Coal_Stockpile,Weekend_Offpeak) - 19.553408*x(October,Coal_Columbian,Weekday_Peak) - 19.553408*x(October,Coal_Columbian,Weekday_Offpeak) - 19.553408*x(October,Coal_Columbian,Weekend_Peak) - 19.553408*x(October,Coal_Columbian,Weekend_Offpeak) - 19.0708*x(October,Coal_Russian,Weekday_Peak) - 19.0708*x(October,Coal_Russian,Weekday_Offpeak) - 19.0708*x(October,Coal_Russian,Weekend_Peak) - 19.0708*x(October,Coal_Russian,Weekend_Offpeak) - 20.39408*x(October,Coal_Scottish,Weekday_Peak) - 20.39408*x(October,Coal_Scottish,Weekday_Offpeak) - 20.39408*x(October,Coal_Scottish,Weekend_Peak) - 20.39408*x(October,Coal_Scottish,Weekend_Offpeak) - 1.40112*x(October,Wood_chips,Weekday_Peak) - 1.40112*x(October,Wood_chips,Weekday_Offpeak) - 1.40112*x(October,Wood_chips,Weekend_Peak) - 1.40112*x(October,Wood_chips,Weekend_Offpeak) + F1 =E= 0 ; (LHS = 0)
+     
+
+---- Electricity  =E=  
+
+Electricity..  - 90.407268*x(June,Coal_Stockpile,Weekday_Peak) - 67.805451*x(June,Coal_Stockpile,Weekday_Offpeak) - 84.1289855*x(June,Coal_Stockpile,Weekend_Peak) - 65.7964006*x(June,Coal_Stockpile,Weekend_Offpeak) - 87.990336*x(June,Coal_Columbian,Weekday_Peak) - 65.992752*x(June,Coal_Columbian,Weekday_Offpeak) - 81.879896*x(June,Coal_Columbian,Weekend_Peak) - 64.0374112*x(June,Coal_Columbian,Weekend_Offpeak) - 85.8186*x(June,Coal_Russian,Weekday_Peak) - 64.36395*x(June,Coal_Russian,Weekday_Offpeak) - 79.858975*x(June,Coal_Russian,Weekend_Peak) - 62.45687*x(June,Coal_Russian,Weekend_Offpeak) - 91.77336*x(June,Coal_Scottish,Weekday_Peak) - 68.83002*x(June,Coal_Scottish,Weekday_Offpeak) - 85.40021*x(June,Coal_Scottish,Weekend_Peak) - 66.790612*x(June,Coal_Scottish,Weekend_Offpeak) - 6.30504*x(June,Wood_chips,Weekday_Peak) - 4.72878*x(June,Wood_chips,Weekday_Offpeak) - 5.86719*x(June,Wood_chips,Weekend_Peak) - 4.588668*x(June,Wood_chips,Weekend_Offpeak) - 91.28622755*x(July,Coal_Stockpile,Weekday_Peak) - 67.805451*x(July,Coal_Stockpile,Weekday_Offpeak) - 86.1380359*x(July,Coal_Stockpile,Weekend_Peak) - 66.0475319*x(July,Coal_Stockpile,Weekend_Offpeak) - 88.8457976*x(July,Coal_Columbian,Weekday_Peak) - 65.992752*x(July,Coal_Columbian,Weekday_Offpeak) - 83.8352368*x(July,Coal_Columbian,Weekend_Peak) - 64.2818288*x(July,Coal_Columbian,Weekend_Offpeak) - 86.6529475*x(July,Coal_Russian,Weekday_Peak) - 64.36395*x(July,Coal_Russian,Weekday_Offpeak) - 81.766055*x(July,Coal_Russian,Weekend_Peak) - 62.695255*x(July,Coal_Russian,Weekend_Offpeak) - 92.665601*x(July,Coal_Scottish,Weekday_Peak) - 68.83002*x(July,Coal_Scottish,Weekday_Offpeak) - 87.439618*x(July,Coal_Scottish,Weekend_Peak) - 67.045538*x(July,Coal_Scottish,Weekend_Offpeak) - 6.366339*x(July,Wood_chips,Weekday_Peak) - 4.72878*x(July,Wood_chips,Weekday_Offpeak) - 6.007302*x(July,Wood_chips,Weekend_Peak) - 4.606182*x(July,Wood_chips,Weekend_Offpeak) - 94.55093445*x(August,Coal_Stockpile,Weekday_Peak) - 70.8190266*x(August,Coal_Stockpile,Weekday_Offpeak) - 89.52830845*x(August,Coal_Stockpile,Weekend_Peak) - 69.0611075*x(August,Coal_Stockpile,Weekend_Offpeak) - 92.0232264*x(August,Coal_Columbian,Weekday_Peak) - 68.9257632*x(August,Coal_Columbian,Weekday_Offpeak) - 87.1348744*x(August,Coal_Columbian,Weekend_Peak) - 67.21484*x(August,Coal_Columbian,Weekend_Offpeak) - 89.7519525*x(August,Coal_Russian,Weekday_Peak) - 67.22457*x(August,Coal_Russian,Weekday_Offpeak) - 84.9842525*x(August,Coal_Russian,Weekend_Peak) - 65.555875*x(August,Coal_Russian,Weekend_Offpeak) - 95.979639*x(August,Coal_Scottish,Weekday_Peak) - 71.889132*x(August,Coal_Scottish,Weekday_Offpeak) - 90.881119*x(August,Coal_Scottish,Weekend_Peak) - 70.10465*x(August,Coal_Scottish,Weekend_Offpeak) - 6.594021*x(August,Wood_chips,Weekday_Peak) - 4.938948*x(August,Wood_chips,Weekday_Offpeak) - 6.243741*x(August,Wood_chips,Weekend_Peak) - 4.81635*x(August,Wood_chips,Weekend_Offpeak) - 96.30885355*x(September,Coal_Stockpile,Weekday_Peak) - 71.5724205*x(September,Coal_Stockpile,Weekday_Offpeak) - 89.9050054*x(September,Coal_Stockpile,Weekend_Peak) - 69.43780445*x(September,Coal_Stockpile,Weekend_Offpeak) - 93.7341496*x(September,Coal_Columbian,Weekday_Peak) - 69.659016*x(September,Coal_Columbian,Weekday_Offpeak) - 87.5015008*x(September,Coal_Columbian,Weekend_Peak) - 67.5814664*x(September,Coal_Columbian,Weekend_Offpeak) - 91.4206475*x(September,Coal_Russian,Weekday_Peak) - 67.939725*x(September,Coal_Russian,Weekday_Offpeak) - 85.34183*x(September,Coal_Russian,Weekend_Peak) - 65.9134525*x(September,Coal_Russian,Weekend_Offpeak) - 97.764121*x(September,Coal_Scottish,Weekday_Peak) - 72.65391*x(September,Coal_Scottish,Weekday_Offpeak) - 91.263508*x(September,Coal_Scottish,Weekend_Peak) - 70.487039*x(September,Coal_Scottish,Weekend_Offpeak) - 6.716619*x(September,Wood_chips,Weekday_Peak) - 4.99149*x(September,Wood_chips,Weekday_Offpeak) - 6.270012*x(September,Wood_chips,Weekend_Peak) - 4.842621*x(September,Wood_chips,Weekend_Offpeak) - 109.7443781*x(October,Coal_Stockpile,Weekday_Peak) - 79.6086221*x(October,Coal_Stockpile,Weekday_Offpeak) - 97.1878131*x(October,Coal_Stockpile,Weekend_Peak) - 75.5905213*x(October,Coal_Stockpile,Weekend_Offpeak) - 106.8104912*x(October,Coal_Columbian,Weekday_Peak) - 77.4803792*x(October,Coal_Columbian,Weekday_Offpeak) - 94.5896112*x(October,Coal_Columbian,Weekend_Peak) - 73.5696976*x(October,Coal_Columbian,Weekend_Offpeak) - 104.174245*x(October,Coal_Russian,Weekday_Peak) - 75.568045*x(October,Coal_Russian,Weekday_Offpeak) - 92.254995*x(October,Coal_Russian,Weekend_Peak) - 71.753885*x(October,Coal_Russian,Weekend_Offpeak) - 111.402662*x(October,Coal_Scottish,Weekday_Peak) - 80.811542*x(October,Coal_Scottish,Weekday_Offpeak) - 98.656362*x(October,Coal_Scottish,Weekend_Peak) - 76.732726*x(October,Coal_Scottish,Weekend_Offpeak) - 7.653618*x(October,Wood_chips,Weekday_Peak) - 5.551938*x(October,Wood_chips,Weekday_Offpeak) - 6.777918*x(October,Wood_chips,Weekend_Peak) - 5.271714*x(October,Wood_chips,Weekend_Offpeak) + F2 =E= 0 ; (LHS = 0)
+     
+
+---- costfuel  =E=  
+
+costfuel..  - 42.56*x(June,Coal_Stockpile,Weekday_Peak) - 42.56*x(June,Coal_Stockpile,Weekday_Offpeak) - 42.56*x(June,Coal_Stockpile,Weekend_Peak) - 42.56*x(June,Coal_Stockpile,Weekend_Offpeak) - 43.93*x(June,Coal_Columbian,Weekday_Peak) - 43.93*x(June,Coal_Columbian,Weekday_Offpeak) - 43.93*x(June,Coal_Columbian,Weekend_Peak) - 43.93*x(June,Coal_Columbian,Weekend_Offpeak) - 43.8*x(June,Coal_Russian,Weekday_Peak) - 43.8*x(June,Coal_Russian,Weekday_Offpeak) - 43.8*x(June,Coal_Russian,Weekend_Peak) - 43.8*x(June,Coal_Russian,Weekend_Offpeak) - 42*x(June,Coal_Scottish,Weekday_Peak) - 42*x(June,Coal_Scottish,Weekday_Offpeak) - 42*x(June,Coal_Scottish,Weekend_Peak) - 42*x(June,Coal_Scottish,Weekend_Offpeak) - 73.77*x(June,Wood_chips,Weekday_Peak) - 73.77*x(June,Wood_chips,Weekday_Offpeak) - 73.77*x(June,Wood_chips,Weekend_Peak) - 73.77*x(June,Wood_chips,Weekend_Offpeak) - 42.56*x(July,Coal_Stockpile,Weekday_Peak) - 42.56*x(July,Coal_Stockpile,Weekday_Offpeak) - 42.56*x(July,Coal_Stockpile,Weekend_Peak) - 42.56*x(July,Coal_Stockpile,Weekend_Offpeak) - 43.93*x(July,Coal_Columbian,Weekday_Peak) - 43.93*x(July,Coal_Columbian,Weekday_Offpeak) - 43.93*x(July,Coal_Columbian,Weekend_Peak) - 43.93*x(July,Coal_Columbian,Weekend_Offpeak) - 43.8*x(July,Coal_Russian,Weekday_Peak) - 43.8*x(July,Coal_Russian,Weekday_Offpeak) - 43.8*x(July,Coal_Russian,Weekend_Peak) - 43.8*x(July,Coal_Russian,Weekend_Offpeak) - 42*x(July,Coal_Scottish,Weekday_Peak) - 42*x(July,Coal_Scottish,Weekday_Offpeak) - 42*x(July,Coal_Scottish,Weekend_Peak) - 42*x(July,Coal_Scottish,Weekend_Offpeak) - 73.77*x(July,Wood_chips,Weekday_Peak) - 73.77*x(July,Wood_chips,Weekday_Offpeak) - 73.77*x(July,Wood_chips,Weekend_Peak) - 73.77*x(July,Wood_chips,Weekend_Offpeak) - 42.56*x(August,Coal_Stockpile,Weekday_Peak) - 42.56*x(August,Coal_Stockpile,Weekday_Offpeak) - 42.56*x(August,Coal_Stockpile,Weekend_Peak) - 42.56*x(August,Coal_Stockpile,Weekend_Offpeak) - 43.93*x(August,Coal_Columbian,Weekday_Peak) - 43.93*x(August,Coal_Columbian,Weekday_Offpeak) - 43.93*x(August,Coal_Columbian,Weekend_Peak) - 43.93*x(August,Coal_Columbian,Weekend_Offpeak) - 43.8*x(August,Coal_Russian,Weekday_Peak) - 43.8*x(August,Coal_Russian,Weekday_Offpeak) - 43.8*x(August,Coal_Russian,Weekend_Peak) - 43.8*x(August,Coal_Russian,Weekend_Offpeak) - 42*x(August,Coal_Scottish,Weekday_Peak) - 42*x(August,Coal_Scottish,Weekday_Offpeak) - 42*x(August,Coal_Scottish,Weekend_Peak) - 42*x(August,Coal_Scottish,Weekend_Offpeak) - 73.77*x(August,Wood_chips,Weekday_Peak) - 73.77*x(August,Wood_chips,Weekday_Offpeak) - 73.77*x(August,Wood_chips,Weekend_Peak) - 73.77*x(August,Wood_chips,Weekend_Offpeak) - 42.56*x(September,Coal_Stockpile,Weekday_Peak) - 42.56*x(September,Coal_Stockpile,Weekday_Offpeak) - 42.56*x(September,Coal_Stockpile,Weekend_Peak) - 42.56*x(September,Coal_Stockpile,Weekend_Offpeak) - 43.93*x(September,Coal_Columbian,Weekday_Peak) - 43.93*x(September,Coal_Columbian,Weekday_Offpeak) - 43.93*x(September,Coal_Columbian,Weekend_Peak) - 43.93*x(September,Coal_Columbian,Weekend_Offpeak) - 43.8*x(September,Coal_Russian,Weekday_Peak) - 43.8*x(September,Coal_Russian,Weekday_Offpeak) - 43.8*x(September,Coal_Russian,Weekend_Peak) - 43.8*x(September,Coal_Russian,Weekend_Offpeak) - 42*x(September,Coal_Scottish,Weekday_Peak) - 42*x(September,Coal_Scottish,Weekday_Offpeak) - 42*x(September,Coal_Scottish,Weekend_Peak) - 42*x(September,Coal_Scottish,Weekend_Offpeak) - 73.77*x(September,Wood_chips,Weekday_Peak) - 73.77*x(September,Wood_chips,Weekday_Offpeak) - 73.77*x(September,Wood_chips,Weekend_Peak) - 73.77*x(September,Wood_chips,Weekend_Offpeak) - 42.56*x(October,Coal_Stockpile,Weekday_Peak) - 42.56*x(October,Coal_Stockpile,Weekday_Offpeak) - 42.56*x(October,Coal_Stockpile,Weekend_Peak) - 42.56*x(October,Coal_Stockpile,Weekend_Offpeak) - 43.93*x(October,Coal_Columbian,Weekday_Peak) - 43.93*x(October,Coal_Columbian,Weekday_Offpeak) - 43.93*x(October,Coal_Columbian,Weekend_Peak) - 43.93*x(October,Coal_Columbian,Weekend_Offpeak) - 43.8*x(October,Coal_Russian,Weekday_Peak) - 43.8*x(October,Coal_Russian,Weekday_Offpeak) - 43.8*x(October,Coal_Russian,Weekend_Peak) - 43.8*x(October,Coal_Russian,Weekend_Offpeak) - 42*x(October,Coal_Scottish,Weekday_Peak) - 42*x(October,Coal_Scottish,Weekday_Offpeak) - 42*x(October,Coal_Scottish,Weekend_Peak) - 42*x(October,Coal_Scottish,Weekend_Offpeak) - 73.77*x(October,Wood_chips,Weekday_Peak) - 73.77*x(October,Wood_chips,Weekday_Offpeak) - 73.77*x(October,Wood_chips,Weekend_Peak) - 73.77*x(October,Wood_chips,Weekend_Offpeak) + F3 =E= 0 ; (LHS = 0)
+     
+
+---- transmission  =E=  
+
+transmission..  - 1.63235345*x(June,Coal_Stockpile,Weekday_Peak) - 1.63235345*x(June,Coal_Stockpile,Weekday_Offpeak) - 1.63235345*x(June,Coal_Stockpile,Weekend_Peak) - 1.63235345*x(June,Coal_Stockpile,Weekend_Offpeak) - 1.5887144*x(June,Coal_Columbian,Weekday_Peak) - 1.5887144*x(June,Coal_Columbian,Weekday_Offpeak) - 1.5887144*x(June,Coal_Columbian,Weekend_Peak) - 1.5887144*x(June,Coal_Columbian,Weekend_Offpeak) - 1.5495025*x(June,Coal_Russian,Weekday_Peak) - 1.5495025*x(June,Coal_Russian,Weekday_Offpeak) - 1.5495025*x(June,Coal_Russian,Weekend_Peak) - 1.5495025*x(June,Coal_Russian,Weekend_Offpeak) - 1.657019*x(June,Coal_Scottish,Weekday_Peak) - 1.657019*x(June,Coal_Scottish,Weekday_Offpeak) - 1.657019*x(June,Coal_Scottish,Weekend_Peak) - 1.657019*x(June,Coal_Scottish,Weekend_Offpeak) - 0.113841*x(June,Wood_chips,Weekday_Peak) - 0.113841*x(June,Wood_chips,Weekday_Offpeak) - 0.113841*x(June,Wood_chips,Weekend_Peak) - 0.113841*x(June,Wood_chips,Weekend_Offpeak) - 1.63235345*x(July,Coal_Stockpile,Weekday_Peak) - 1.63235345*x(July,Coal_Stockpile,Weekday_Offpeak) - 1.63235345*x(July,Coal_Stockpile,Weekend_Peak) - 1.63235345*x(July,Coal_Stockpile,Weekend_Offpeak) - 1.5887144*x(July,Coal_Columbian,Weekday_Peak) - 1.5887144*x(July,Coal_Columbian,Weekday_Offpeak) - 1.5887144*x(July,Coal_Columbian,Weekend_Peak) - 1.5887144*x(July,Coal_Columbian,Weekend_Offpeak) - 1.5495025*x(July,Coal_Russian,Weekday_Peak) - 1.5495025*x(July,Coal_Russian,Weekday_Offpeak) - 1.5495025*x(July,Coal_Russian,Weekend_Peak) - 1.5495025*x(July,Coal_Russian,Weekend_Offpeak) - 1.657019*x(July,Coal_Scottish,Weekday_Peak) - 1.657019*x(July,Coal_Scottish,Weekday_Offpeak) - 1.657019*x(July,Coal_Scottish,Weekend_Peak) - 1.657019*x(July,Coal_Scottish,Weekend_Offpeak) - 0.113841*x(July,Wood_chips,Weekday_Peak) - 0.113841*x(July,Wood_chips,Weekday_Offpeak) - 0.113841*x(July,Wood_chips,Weekend_Peak) - 0.113841*x(July,Wood_chips,Weekend_Offpeak) - 1.63235345*x(August,Coal_Stockpile,Weekday_Peak) - 1.63235345*x(August,Coal_Stockpile,Weekday_Offpeak) - 1.63235345*x(August,Coal_Stockpile,Weekend_Peak) - 1.63235345*x(August,Coal_Stockpile,Weekend_Offpeak) - 1.5887144*x(August,Coal_Columbian,Weekday_Peak) - 1.5887144*x(August,Coal_Columbian,Weekday_Offpeak) - 1.5887144*x(August,Coal_Columbian,Weekend_Peak) - 1.5887144*x(August,Coal_Columbian,Weekend_Offpeak) - 1.5495025*x(August,Coal_Russian,Weekday_Peak) - 1.5495025*x(August,Coal_Russian,Weekday_Offpeak) - 1.5495025*x(August,Coal_Russian,Weekend_Peak) - 1.5495025*x(August,Coal_Russian,Weekend_Offpeak) - 1.657019*x(August,Coal_Scottish,Weekday_Peak) - 1.657019*x(August,Coal_Scottish,Weekday_Offpeak) - 1.657019*x(August,Coal_Scottish,Weekend_Peak) - 1.657019*x(August,Coal_Scottish,Weekend_Offpeak) - 0.113841*x(August,Wood_chips,Weekday_Peak) - 0.113841*x(August,Wood_chips,Weekday_Offpeak) - 0.113841*x(August,Wood_chips,Weekend_Peak) - 0.113841*x(August,Wood_chips,Weekend_Offpeak) - 1.63235345*x(September,Coal_Stockpile,Weekday_Peak) - 1.63235345*x(September,Coal_Stockpile,Weekday_Offpeak) - 1.63235345*x(September,Coal_Stockpile,Weekend_Peak) - 1.63235345*x(September,Coal_Stockpile,Weekend_Offpeak) - 1.5887144*x(September,Coal_Columbian,Weekday_Peak) - 1.5887144*x(September,Coal_Columbian,Weekday_Offpeak) - 1.5887144*x(September,Coal_Columbian,Weekend_Peak) - 1.5887144*x(September,Coal_Columbian,Weekend_Offpeak) - 1.5495025*x(September,Coal_Russian,Weekday_Peak) - 1.5495025*x(September,Coal_Russian,Weekday_Offpeak) - 1.5495025*x(September,Coal_Russian,Weekend_Peak) - 1.5495025*x(September,Coal_Russian,Weekend_Offpeak) - 1.657019*x(September,Coal_Scottish,Weekday_Peak) - 1.657019*x(September,Coal_Scottish,Weekday_Offpeak) - 1.657019*x(September,Coal_Scottish,Weekend_Peak) - 1.657019*x(September,Coal_Scottish,Weekend_Offpeak) - 0.113841*x(September,Wood_chips,Weekday_Peak) - 0.113841*x(September,Wood_chips,Weekday_Offpeak) - 0.113841*x(September,Wood_chips,Weekend_Peak) - 0.113841*x(September,Wood_chips,Weekend_Offpeak) - 1.63235345*x(October,Coal_Stockpile,Weekday_Peak) - 1.63235345*x(October,Coal_Stockpile,Weekday_Offpeak) - 1.63235345*x(October,Coal_Stockpile,Weekend_Peak) - 1.63235345*x(October,Coal_Stockpile,Weekend_Offpeak) - 1.5887144*x(October,Coal_Columbian,Weekday_Peak) - 1.5887144*x(October,Coal_Columbian,Weekday_Offpeak) - 1.5887144*x(October,Coal_Columbian,Weekend_Peak) - 1.5887144*x(October,Coal_Columbian,Weekend_Offpeak) - 1.5495025*x(October,Coal_Russian,Weekday_Peak) - 1.5495025*x(October,Coal_Russian,Weekday_Offpeak) - 1.5495025*x(October,Coal_Russian,Weekend_Peak) - 1.5495025*x(October,Coal_Russian,Weekend_Offpeak) - 1.657019*x(October,Coal_Scottish,Weekday_Peak) - 1.657019*x(October,Coal_Scottish,Weekday_Offpeak) - 1.657019*x(October,Coal_Scottish,Weekend_Peak) - 1.657019*x(October,Coal_Scottish,Weekend_Offpeak) - 0.113841*x(October,Wood_chips,Weekday_Peak) - 0.113841*x(October,Wood_chips,Weekday_Offpeak) - 0.113841*x(October,Wood_chips,Weekend_Peak) - 0.113841*x(October,Wood_chips,Weekend_Offpeak) + F4 =E= 0 ; (LHS = 0)
+     
+
+---- rocsupp  =E=  
+
+rocsupp..  - 7.8813*x(June,Wood_chips,Weekday_Peak) - 7.8813*x(June,Wood_chips,Weekday_Offpeak) - 7.8813*x(June,Wood_chips,Weekend_Peak) - 7.8813*x(June,Wood_chips,Weekend_Offpeak) - 7.8813*x(July,Wood_chips,Weekday_Peak) - 7.8813*x(July,Wood_chips,Weekday_Offpeak) - 7.8813*x(July,Wood_chips,Weekend_Peak) - 7.8813*x(July,Wood_chips,Weekend_Offpeak) - 7.8813*x(August,Wood_chips,Weekday_Peak) - 7.8813*x(August,Wood_chips,Weekday_Offpeak) - 7.8813*x(August,Wood_chips,Weekend_Peak) - 7.8813*x(August,Wood_chips,Weekend_Offpeak) - 7.8813*x(September,Wood_chips,Weekday_Peak) - 7.8813*x(September,Wood_chips,Weekday_Offpeak) - 7.8813*x(September,Wood_chips,Weekend_Peak) - 7.8813*x(September,Wood_chips,Weekend_Offpeak) - 7.8813*x(October,Wood_chips,Weekday_Peak) - 7.8813*x(October,Wood_chips,Weekday_Offpeak) - 7.8813*x(October,Wood_chips,Weekend_Peak) - 7.8813*x(October,Wood_chips,Weekend_Offpeak) + F5 =E= 0 ; (LHS = 0)
+     
+
+---- SulphurBubble  =L=  define constraint for sulfur bubble
+
+SulphurBubble..  0.0138*x(June,Coal_Stockpile,Weekday_Peak) + 0.0138*x(June,Coal_Stockpile,Weekday_Offpeak) + 0.0138*x(June,Coal_Stockpile,Weekend_Peak) + 0.0138*x(June,Coal_Stockpile,Weekend_Offpeak) + 0.007*x(June,Coal_Columbian,Weekday_Peak) + 0.007*x(June,Coal_Columbian,Weekday_Offpeak) + 0.007*x(June,Coal_Columbian,Weekend_Peak) + 0.007*x(June,Coal_Columbian,Weekend_Offpeak) + 0.0035*x(June,Coal_Russian,Weekday_Peak) + 0.0035*x(June,Coal_Russian,Weekday_Offpeak) + 0.0035*x(June,Coal_Russian,Weekend_Peak) + 0.0035*x(June,Coal_Russian,Weekend_Offpeak) + 0.0172*x(June,Coal_Scottish,Weekday_Peak) + 0.0172*x(June,Coal_Scottish,Weekday_Offpeak) + 0.0172*x(June,Coal_Scottish,Weekend_Peak) + 0.0172*x(June,Coal_Scottish,Weekend_Offpeak) + 0.0001*x(June,Wood_chips,Weekday_Peak) + 0.0001*x(June,Wood_chips,Weekday_Offpeak) + 0.0001*x(June,Wood_chips,Weekend_Peak) + 0.0001*x(June,Wood_chips,Weekend_Offpeak) + 0.0138*x(July,Coal_Stockpile,Weekday_Peak) + 0.0138*x(July,Coal_Stockpile,Weekday_Offpeak) + 0.0138*x(July,Coal_Stockpile,Weekend_Peak) + 0.0138*x(July,Coal_Stockpile,Weekend_Offpeak) + 0.007*x(July,Coal_Columbian,Weekday_Peak) + 0.007*x(July,Coal_Columbian,Weekday_Offpeak) + 0.007*x(July,Coal_Columbian,Weekend_Peak) + 0.007*x(July,Coal_Columbian,Weekend_Offpeak) + 0.0035*x(July,Coal_Russian,Weekday_Peak) + 0.0035*x(July,Coal_Russian,Weekday_Offpeak) + 0.0035*x(July,Coal_Russian,Weekend_Peak) + 0.0035*x(July,Coal_Russian,Weekend_Offpeak) + 0.0172*x(July,Coal_Scottish,Weekday_Peak) + 0.0172*x(July,Coal_Scottish,Weekday_Offpeak) + 0.0172*x(July,Coal_Scottish,Weekend_Peak) + 0.0172*x(July,Coal_Scottish,Weekend_Offpeak) + 0.0001*x(July,Wood_chips,Weekday_Peak) + 0.0001*x(July,Wood_chips,Weekday_Offpeak) + 0.0001*x(July,Wood_chips,Weekend_Peak) + 0.0001*x(July,Wood_chips,Weekend_Offpeak) + 0.0138*x(August,Coal_Stockpile,Weekday_Peak) + 0.0138*x(August,Coal_Stockpile,Weekday_Offpeak) + 0.0138*x(August,Coal_Stockpile,Weekend_Peak) + 0.0138*x(August,Coal_Stockpile,Weekend_Offpeak) + 0.007*x(August,Coal_Columbian,Weekday_Peak) + 0.007*x(August,Coal_Columbian,Weekday_Offpeak) + 0.007*x(August,Coal_Columbian,Weekend_Peak) + 0.007*x(August,Coal_Columbian,Weekend_Offpeak) + 0.0035*x(August,Coal_Russian,Weekday_Peak) + 0.0035*x(August,Coal_Russian,Weekday_Offpeak) + 0.0035*x(August,Coal_Russian,Weekend_Peak) + 0.0035*x(August,Coal_Russian,Weekend_Offpeak) + 0.0172*x(August,Coal_Scottish,Weekday_Peak) + 0.0172*x(August,Coal_Scottish,Weekday_Offpeak) + 0.0172*x(August,Coal_Scottish,Weekend_Peak) + 0.0172*x(August,Coal_Scottish,Weekend_Offpeak) + 0.0001*x(August,Wood_chips,Weekday_Peak) + 0.0001*x(August,Wood_chips,Weekday_Offpeak) + 0.0001*x(August,Wood_chips,Weekend_Peak) + 0.0001*x(August,Wood_chips,Weekend_Offpeak) + 0.0138*x(September,Coal_Stockpile,Weekday_Peak) + 0.0138*x(September,Coal_Stockpile,Weekday_Offpeak) + 0.0138*x(September,Coal_Stockpile,Weekend_Peak) + 0.0138*x(September,Coal_Stockpile,Weekend_Offpeak) + 0.007*x(September,Coal_Columbian,Weekday_Peak) + 0.007*x(September,Coal_Columbian,Weekday_Offpeak) + 0.007*x(September,Coal_Columbian,Weekend_Peak) + 0.007*x(September,Coal_Columbian,Weekend_Offpeak) + 0.0035*x(September,Coal_Russian,Weekday_Peak) + 0.0035*x(September,Coal_Russian,Weekday_Offpeak) + 0.0035*x(September,Coal_Russian,Weekend_Peak) + 0.0035*x(September,Coal_Russian,Weekend_Offpeak) + 0.0172*x(September,Coal_Scottish,Weekday_Peak) + 0.0172*x(September,Coal_Scottish,Weekday_Offpeak) + 0.0172*x(September,Coal_Scottish,Weekend_Peak) + 0.0172*x(September,Coal_Scottish,Weekend_Offpeak) + 0.0001*x(September,Wood_chips,Weekday_Peak) + 0.0001*x(September,Wood_chips,Weekday_Offpeak) + 0.0001*x(September,Wood_chips,Weekend_Peak) + 0.0001*x(September,Wood_chips,Weekend_Offpeak) + 0.0138*x(October,Coal_Stockpile,Weekday_Peak) + 0.0138*x(October,Coal_Stockpile,Weekday_Offpeak) + 0.0138*x(October,Coal_Stockpile,Weekend_Peak) + 0.0138*x(October,Coal_Stockpile,Weekend_Offpeak) + 0.007*x(October,Coal_Columbian,Weekday_Peak) + 0.007*x(October,Coal_Columbian,Weekday_Offpeak) + 0.007*x(October,Coal_Columbian,Weekend_Peak) + 0.007*x(October,Coal_Columbian,Weekend_Offpeak) + 0.0035*x(October,Coal_Russian,Weekday_Peak) + 0.0035*x(October,Coal_Russian,Weekday_Offpeak) + 0.0035*x(October,Coal_Russian,Weekend_Peak) + 0.0035*x(October,Coal_Russian,Weekend_Offpeak) + 0.0172*x(October,Coal_Scottish,Weekday_Peak) + 0.0172*x(October,Coal_Scottish,Weekday_Offpeak) + 0.0172*x(October,Coal_Scottish,Weekend_Peak) + 0.0172*x(October,Coal_Scottish,Weekend_Offpeak) + 0.0001*x(October,Wood_chips,Weekday_Peak) + 0.0001*x(October,Wood_chips,Weekday_Offpeak) + 0.0001*x(October,Wood_chips,Weekend_Peak) + 0.0001*x(October,Wood_chips,Weekend_Offpeak) =L= 9000 ; (LHS = 0)
+     
+
+---- Stockpile  =L=  define constraint for stockpile
+
+Stockpile..  x(June,Coal_Stockpile,Weekday_Peak) + x(June,Coal_Stockpile,Weekday_Offpeak) + x(June,Coal_Stockpile,Weekend_Peak) + x(June,Coal_Stockpile,Weekend_Offpeak) + x(July,Coal_Stockpile,Weekday_Peak) + x(July,Coal_Stockpile,Weekday_Offpeak) + x(July,Coal_Stockpile,Weekend_Peak) + x(July,Coal_Stockpile,Weekend_Offpeak) + x(August,Coal_Stockpile,Weekday_Peak) + x(August,Coal_Stockpile,Weekday_Offpeak) + x(August,Coal_Stockpile,Weekend_Peak) + x(August,Coal_Stockpile,Weekend_Offpeak) + x(September,Coal_Stockpile,Weekday_Peak) + x(September,Coal_Stockpile,Weekday_Offpeak) + x(September,Coal_Stockpile,Weekend_Peak) + x(September,Coal_Stockpile,Weekend_Offpeak) + x(October,Coal_Stockpile,Weekday_Peak) + x(October,Coal_Stockpile,Weekday_Offpeak) + x(October,Coal_Stockpile,Weekend_Peak) + x(October,Coal_Stockpile,Weekend_Offpeak) =L= 600000 ; (LHS = 0)
+     
+
+---- firstmonths1  =E=  
+
+firstmonths1(June,Coal_Columbian,Weekday_Peak)..  x(June,Coal_Columbian,Weekday_Peak) =E= 0 ; (LHS = 0)
+     
+firstmonths1(June,Coal_Columbian,Weekday_Offpeak)..  x(June,Coal_Columbian,Weekday_Offpeak) =E= 0 ; (LHS = 0)
+     
+firstmonths1(June,Coal_Columbian,Weekend_Peak)..  x(June,Coal_Columbian,Weekend_Peak) =E= 0 ; (LHS = 0)
+     
+REMAINING 33 ENTRIES SKIPPED
+
+
+---- Plantcapacity  =L=  plant capacity constraintsasas
+
+Plantcapacity(June,Weekday_Peak)..  2.511313*x(June,Coal_Stockpile,Weekday_Peak) + 2.444176*x(June,Coal_Columbian,Weekday_Peak) + 2.38385*x(June,Coal_Russian,Weekday_Peak) + 2.54926*x(June,Coal_Scottish,Weekday_Peak) + 0.17514*x(June,Wood_chips,Weekday_Peak) =L= 264000 ; (LHS = 0)
+     
+Plantcapacity(June,Weekday_Offpeak)..  2.511313*x(June,Coal_Stockpile,Weekday_Offpeak) + 2.444176*x(June,Coal_Columbian,Weekday_Offpeak) + 2.38385*x(June,Coal_Russian,Weekday_Offpeak) + 2.54926*x(June,Coal_Scottish,Weekday_Offpeak) + 0.17514*x(June,Wood_chips,Weekday_Offpeak) =L= 264000 ; (LHS = 0)
+     
+Plantcapacity(June,Weekend_Peak)..  2.511313*x(June,Coal_Stockpile,Weekend_Peak) + 2.444176*x(June,Coal_Columbian,Weekend_Peak) + 2.38385*x(June,Coal_Russian,Weekend_Peak) + 2.54926*x(June,Coal_Scottish,Weekend_Peak) + 0.17514*x(June,Wood_chips,Weekend_Peak) =L= 96000 ; (LHS = 0)
+     
+REMAINING 17 ENTRIES SKIPPED
+
+GAMS 37.1.0  r07954d5 Released Nov 11, 2021 WEX-WEI x86 64bit/MS Windows - 02/08/22 03:04:32 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE profitfunction Using LP From line 110
+
+
+---- x  amount of fuel burned in month i type j in all periods k
+
+x(June,Coal_Stockpile,Weekday_Peak)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      -20.0905  Co2
+      -90.4073  Electricity
+      -42.56    costfuel
+       -1.6324  transmission
+        0.0138  SulphurBubble
+        1       Stockpile
+        2.5113  Plantcapacity(June,Weekday_Peak)
+
+x(June,Coal_Stockpile,Weekday_Offpeak)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      -20.0905  Co2
+      -67.8055  Electricity
+      -42.56    costfuel
+       -1.6324  transmission
+        0.0138  SulphurBubble
+        1       Stockpile
+        2.5113  Plantcapacity(June,Weekday_Offpeak)
+
+x(June,Coal_Stockpile,Weekend_Peak)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      -20.0905  Co2
+      -84.129   Electricity
+      -42.56    costfuel
+       -1.6324  transmission
+        0.0138  SulphurBubble
+        1       Stockpile
+        2.5113  Plantcapacity(June,Weekend_Peak)
+
+REMAINING 97 ENTRIES SKIPPED
+
+---- z  total profit
+
+z
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       Obj
+
+
+---- F1  Co2
+
+F1
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       Obj
+        1       Co2
+
+
+---- F2  Electricity
+
+F2
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+       -1       Obj
+        1       Electricity
+
+
+---- F3  costfuel
+
+F3
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       Obj
+        1       costfuel
+
+
+---- F4  transmission
+
+F4
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       Obj
+        1       transmission
+
+
+---- F5  rocsupp
+
+F5
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+       -1       Obj
+        1       rocsupp
+
+GAMS 37.1.0  r07954d5 Released Nov 11, 2021 WEX-WEI x86 64bit/MS Windows - 02/08/22 03:04:32 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE profitfunction Using LP From line 110
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS          10     SINGLE EQUATIONS           64
+BLOCKS OF VARIABLES           7     SINGLE VARIABLES          106
+NON ZERO ELEMENTS           687
+
+
+GENERATION TIME      =        0.015 SECONDS      4 MB  37.1.0 r07954d5 WEX-WEI
+GAMS 37.1.0  r07954d5 Released Nov 11, 2021 WEX-WEI x86 64bit/MS Windows - 02/08/22 03:04:32 Page 5
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE profitfunction Using LP From line 110
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   profitfunction      OBJECTIVE  z
+     TYPE    LP                  DIRECTION  MAXIMIZE
+     SOLVER  CPLEX               FROM LINE  110
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE         23362276.2759
+
+ RESOURCE USAGE, LIMIT          0.031 10000000000.000
+ ITERATION COUNT, LIMIT        27    2147483647
+--- *** This solver runs with a demo license. No commercial use.
+--- GMO setup time: 0.00s
+--- GMO memory 0.52 Mb (peak 0.52 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 20.1.0.1 link memory 0.00 Mb (peak 0.02 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.02sec (det. 0.21 ticks)
+
+
+Optimal solution found
+Objective:     23362276.275889
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU Obj                 .              .              .             1.0000      
+---- EQU Co2                 .              .              .            -1.0000      
+---- EQU Electrici~          .              .              .             1.0000      
+---- EQU costfuel            .              .              .            -1.0000      
+---- EQU transmiss~          .              .              .            -1.0000      
+---- EQU rocsupp             .              .              .             1.0000      
+---- EQU SulphurBu~        -INF         9000.0000      9000.0000       473.6354      
+---- EQU Stockpile         -INF       506629.3017    600000.0000          .          
+
+  Obj  define objective function
+  SulphurBubble  define constraint for sulfur bubble
+  Stockpile  define constraint for stockpile
+
+---- EQU firstmonths1  
+
+                                             LOWER          LEVEL          UPPER         MARGINAL
+
+June  .Coal_Columbian.Weekday_Peak             .              .              .             0.5382      
+June  .Coal_Columbian.Weekday_Offpeak          .              .              .              .          
+June  .Coal_Columbian.Weekend_Peak             .              .              .             0.5382      
+June  .Coal_Columbian.Weekend_Offpeak          .              .              .              .          
+June  .Coal_Russian  .Weekday_Peak             .              .              .             1.1465      
+June  .Coal_Russian  .Weekday_Offpeak          .              .              .              .          
+June  .Coal_Russian  .Weekend_Peak             .              .              .             1.1465      
+June  .Coal_Russian  .Weekend_Offpeak          .              .              .              .          
+June  .Coal_Scottish .Weekday_Peak             .              .              .              .          
+June  .Coal_Scottish .Weekday_Offpeak          .              .              .              .          
+June  .Coal_Scottish .Weekend_Peak             .              .              .              .          
+June  .Coal_Scottish .Weekend_Offpeak          .              .              .              .          
+July  .Coal_Columbian.Weekday_Peak             .              .              .             0.5382      
+July  .Coal_Columbian.Weekday_Offpeak          .              .              .              .          
+July  .Coal_Columbian.Weekend_Peak             .              .              .             0.5382      
+July  .Coal_Columbian.Weekend_Offpeak          .              .              .              .          
+July  .Coal_Russian  .Weekday_Peak             .              .              .             1.1465      
+July  .Coal_Russian  .Weekday_Offpeak          .              .              .              .          
+July  .Coal_Russian  .Weekend_Peak             .              .              .             1.1465      
+July  .Coal_Russian  .Weekend_Offpeak          .              .              .              .          
+July  .Coal_Scottish .Weekday_Peak             .              .              .              .          
+July  .Coal_Scottish .Weekday_Offpeak          .              .              .              .          
+July  .Coal_Scottish .Weekend_Peak             .              .              .              .          
+July  .Coal_Scottish .Weekend_Offpeak          .              .              .              .          
+August.Coal_Columbian.Weekday_Peak             .              .              .             0.5382      
+August.Coal_Columbian.Weekday_Offpeak          .              .              .             0.5382      
+August.Coal_Columbian.Weekend_Peak             .              .              .             0.5382      
+August.Coal_Columbian.Weekend_Offpeak          .              .              .              .          
+August.Coal_Russian  .Weekday_Peak             .              .              .             1.1465      
+August.Coal_Russian  .Weekday_Offpeak          .              .              .             1.1465      
+August.Coal_Russian  .Weekend_Peak             .              .              .             1.1465      
+August.Coal_Russian  .Weekend_Offpeak          .              .              .              .          
+August.Coal_Scottish .Weekday_Peak             .              .              .              .          
+August.Coal_Scottish .Weekday_Offpeak          .              .              .              .          
+August.Coal_Scottish .Weekend_Peak             .              .              .              .          
+August.Coal_Scottish .Weekend_Offpeak          .              .              .              .          
+
+---- EQU Plantcapacity  plant capacity constraintsasas
+
+                                 LOWER          LEVEL          UPPER         MARGINAL
+
+June     .Weekday_Peak           -INF       264000.0000    264000.0000         7.8000      
+June     .Weekday_Offpeak        -INF             .        264000.0000          .          
+June     .Weekend_Peak           -INF        96000.0000     96000.0000         5.3000      
+June     .Weekend_Offpeak        -INF             .         96000.0000          .          
+July     .Weekday_Peak           -INF       252000.0000    252000.0000         8.1500      
+July     .Weekday_Offpeak        -INF             .        252000.0000          .          
+July     .Weekend_Peak           -INF       120000.0000    120000.0000         6.1000      
+July     .Weekend_Offpeak        -INF             .        120000.0000          .          
+August   .Weekday_Peak           -INF       276000.0000    276000.0000         9.4500      
+August   .Weekday_Offpeak        -INF       168304.7516    276000.0000          .          
+August   .Weekend_Peak           -INF        96000.0000     96000.0000         7.4500      
+August   .Weekend_Offpeak        -INF             .         96000.0000          .          
+September.Weekday_Peak           -INF       264000.0000    264000.0000        10.6310      
+September.Weekday_Offpeak        -INF       264000.0000    264000.0000         0.7810      
+September.Weekend_Peak           -INF        96000.0000     96000.0000         8.0810      
+September.Weekend_Offpeak        -INF             .         96000.0000          .          
+October  .Weekday_Peak           -INF       252000.0000    252000.0000        15.9810      
+October  .Weekday_Offpeak        -INF       252000.0000    252000.0000         3.9810      
+October  .Weekend_Peak           -INF       120000.0000    120000.0000        10.9810      
+October  .Weekend_Offpeak        -INF       120000.0000    120000.0000         2.3810      
+
+---- VAR x  amount of fuel burned in month i type j in all periods k
+
+                                                LOWER          LEVEL          UPPER         MARGINAL
+
+June     .Coal_Stockpile.Weekday_Peak             .        105124.2916        +INF             .          
+June     .Coal_Stockpile.Weekday_Offpeak          .              .            +INF           -3.0136      
+June     .Coal_Stockpile.Weekend_Peak             .         38227.0151        +INF             .          
+June     .Coal_Stockpile.Weekend_Offpeak          .              .            +INF           -5.0226      
+June     .Coal_Columbian.Weekday_Peak             .              .            +INF             .          
+June     .Coal_Columbian.Weekday_Offpeak          .              .            +INF           -2.3948      
+June     .Coal_Columbian.Weekend_Peak             .              .            +INF             .          
+June     .Coal_Columbian.Weekend_Offpeak          .              .            +INF           -4.3502      
+June     .Coal_Russian  .Weekday_Peak             .              .            +INF             .          
+June     .Coal_Russian  .Weekday_Offpeak          .              .            +INF           -1.7141      
+June     .Coal_Russian  .Weekend_Peak             .              .            +INF             .          
+June     .Coal_Russian  .Weekend_Offpeak          .              .            +INF           -3.6212      
+June     .Coal_Scottish .Weekday_Peak             .              .            +INF           -0.3085      
+June     .Coal_Scottish .Weekday_Offpeak          .              .            +INF           -3.3676      
+June     .Coal_Scottish .Weekend_Peak             .              .            +INF           -0.3085      
+June     .Coal_Scottish .Weekend_Offpeak          .              .            +INF           -5.4070      
+June     .Wood_chips    .Weekday_Peak             .              .            +INF          -62.5121      
+June     .Wood_chips    .Weekday_Offpeak          .              .            +INF          -62.7222      
+June     .Wood_chips    .Weekend_Peak             .              .            +INF          -62.5121      
+June     .Wood_chips    .Weekend_Offpeak          .              .            +INF          -62.8624      
+July     .Coal_Stockpile.Weekday_Peak             .        100345.9147        +INF             .          
+July     .Coal_Stockpile.Weekday_Offpeak          .              .            +INF           -3.0136      
+July     .Coal_Stockpile.Weekend_Peak             .         47783.7689        +INF             .          
+July     .Coal_Stockpile.Weekend_Offpeak          .              .            +INF           -4.7715      
+July     .Coal_Columbian.Weekday_Peak             .              .            +INF             .          
+July     .Coal_Columbian.Weekday_Offpeak          .              .            +INF           -2.3948      
+July     .Coal_Columbian.Weekend_Peak             .              .            +INF             .          
+July     .Coal_Columbian.Weekend_Offpeak          .              .            +INF           -4.1057      
+July     .Coal_Russian  .Weekday_Peak             .              .            +INF             .          
+July     .Coal_Russian  .Weekday_Offpeak          .              .            +INF           -1.7141      
+July     .Coal_Russian  .Weekend_Peak             .              .            +INF             .          
+July     .Coal_Russian  .Weekend_Offpeak          .              .            +INF           -3.3828      
+July     .Coal_Scottish .Weekday_Peak             .              .            +INF           -0.3085      
+July     .Coal_Scottish .Weekday_Offpeak          .              .            +INF           -3.3676      
+July     .Coal_Scottish .Weekend_Peak             .              .            +INF           -0.3085      
+July     .Coal_Scottish .Weekend_Offpeak          .              .            +INF           -5.1521      
+July     .Wood_chips    .Weekday_Peak             .              .            +INF          -62.5121      
+July     .Wood_chips    .Weekday_Offpeak          .              .            +INF          -62.7222      
+July     .Wood_chips    .Weekend_Peak             .              .            +INF          -62.5121      
+July     .Wood_chips    .Weekend_Offpeak          .              .            +INF          -62.8448      
+August   .Coal_Stockpile.Weekday_Peak             .        109902.6684        +INF             .          
+August   .Coal_Stockpile.Weekday_Offpeak          .         67018.6279        +INF             .          
+August   .Coal_Stockpile.Weekend_Peak             .         38227.0151        +INF             .          
+August   .Coal_Stockpile.Weekend_Offpeak          .              .            +INF           -1.7579      
+August   .Coal_Columbian.Weekday_Peak             .              .            +INF             .          
+August   .Coal_Columbian.Weekday_Offpeak          .              .            +INF             .          
+August   .Coal_Columbian.Weekend_Peak             .              .            +INF             .          
+August   .Coal_Columbian.Weekend_Offpeak          .              .            +INF           -1.1727      
+August   .Coal_Russian  .Weekday_Peak             .              .            +INF             .          
+August   .Coal_Russian  .Weekday_Offpeak          .              .            +INF             .          
+August   .Coal_Russian  .Weekend_Peak             .              .            +INF             .          
+August   .Coal_Russian  .Weekend_Offpeak          .              .            +INF           -0.5222      
+August   .Coal_Scottish .Weekday_Peak             .              .            +INF           -0.3085      
+August   .Coal_Scottish .Weekday_Offpeak          .              .            +INF           -0.3085      
+August   .Coal_Scottish .Weekend_Peak             .              .            +INF           -0.3085      
+August   .Coal_Scottish .Weekend_Offpeak          .              .            +INF           -2.0930      
+August   .Wood_chips    .Weekday_Peak             .              .            +INF          -62.5121      
+August   .Wood_chips    .Weekday_Offpeak          .              .            +INF          -62.5121      
+August   .Wood_chips    .Weekend_Peak             .              .            +INF          -62.5121      
+August   .Wood_chips    .Weekend_Offpeak          .              .            +INF          -62.6347      
+September.Coal_Stockpile.Weekday_Peak             .              .            +INF           -1.2078      
+September.Coal_Stockpile.Weekday_Offpeak          .              .            +INF           -1.2078      
+September.Coal_Stockpile.Weekend_Peak             .              .            +INF           -1.2078      
+September.Coal_Stockpile.Weekend_Offpeak          .              .            +INF           -1.3812      
+September.Coal_Columbian.Weekday_Peak             .              .            +INF           -0.6374      
+September.Coal_Columbian.Weekday_Offpeak          .              .            +INF           -0.6374      
+September.Coal_Columbian.Weekend_Peak             .              .            +INF           -0.6374      
+September.Coal_Columbian.Weekend_Offpeak          .              .            +INF           -0.8061      
+September.Coal_Russian  .Weekday_Peak             .        110745.2231        +INF             .          
+September.Coal_Russian  .Weekday_Offpeak          .        110745.2231        +INF             .          
+September.Coal_Russian  .Weekend_Peak             .         40270.9902        +INF             .          
+September.Coal_Russian  .Weekend_Offpeak          .              .            +INF           -0.1646      
+September.Coal_Scottish .Weekday_Peak             .              .            +INF           -1.5346      
+September.Coal_Scottish .Weekday_Offpeak          .              .            +INF           -1.5346      
+September.Coal_Scottish .Weekend_Peak             .              .            +INF           -1.5346      
+September.Coal_Scottish .Weekend_Offpeak          .              .            +INF           -1.7106      
+September.Wood_chips    .Weekday_Peak             .              .            +INF          -62.5963      
+September.Wood_chips    .Weekday_Offpeak          .              .            +INF          -62.5963      
+September.Wood_chips    .Weekend_Peak             .              .            +INF          -62.5963      
+September.Wood_chips    .Weekend_Offpeak          .              .            +INF          -62.6084      
+October  .Coal_Stockpile.Weekday_Peak             .              .            +INF           -1.2078      
+October  .Coal_Stockpile.Weekday_Offpeak          .              .            +INF           -1.2078      
+October  .Coal_Stockpile.Weekend_Peak             .              .            +INF           -1.2078      
+October  .Coal_Stockpile.Weekend_Offpeak          .              .            +INF           -1.2078      
+October  .Coal_Columbian.Weekday_Peak             .              .            +INF           -0.6374      
+October  .Coal_Columbian.Weekday_Offpeak          .              .            +INF           -0.6374      
+October  .Coal_Columbian.Weekend_Peak             .              .            +INF           -0.6374      
+October  .Coal_Columbian.Weekend_Offpeak          .              .            +INF           -0.6374      
+October  .Coal_Russian  .Weekday_Peak             .        105711.3493        +INF             .          
+October  .Coal_Russian  .Weekday_Offpeak          .        105711.3493        +INF             .          
+October  .Coal_Russian  .Weekend_Peak             .         50338.7378        +INF             .          
+October  .Coal_Russian  .Weekend_Offpeak          .         50338.7378        +INF             .          
+October  .Coal_Scottish .Weekday_Peak             .              .            +INF           -1.5346      
+October  .Coal_Scottish .Weekday_Offpeak          .              .            +INF           -1.5346      
+October  .Coal_Scottish .Weekend_Peak             .              .            +INF           -1.5346      
+October  .Coal_Scottish .Weekend_Offpeak          .              .            +INF           -1.5346      
+October  .Wood_chips    .Weekday_Peak             .              .            +INF          -62.5963      
+October  .Wood_chips    .Weekday_Offpeak          .              .            +INF          -62.5963      
+October  .Wood_chips    .Weekend_Peak             .              .            +INF          -62.5963      
+October  .Wood_chips    .Weekend_Offpeak          .              .            +INF          -62.5963      
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR z                 -INF      2.3362276E+7        +INF             .          
+---- VAR F1                -INF      2.1122438E+7        +INF             .          
+---- VAR F2                -INF      9.2898194E+7        +INF             .          
+---- VAR F3                -INF      4.6697282E+7        +INF             .          
+---- VAR F4                -INF      1716198.0885        +INF             .          
+---- VAR F5                -INF             .            +INF             .          
+
+  z  total profit
+  F1  Co2
+  F2  Electricity
+  F3  costfuel
+  F4  transmission
+  F5  rocsupp
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 37.1.0  r07954d5 Released Nov 11, 2021 WEX-WEI x86 64bit/MS Windows - 02/08/22 03:04:32 Page 6
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    111 VARIABLE x.L  amount of fuel burned in month i type j in all periods k
+
+                          Weekday_P~  Weekday_O~  Weekend_P~  Weekend_O~
+
+June     .Coal_Stockpile  105124.292               38227.015
+July     .Coal_Stockpile  100345.915               47783.769
+August   .Coal_Stockpile  109902.668   67018.628   38227.015
+September.Coal_Russian    110745.223  110745.223   40270.990
+October  .Coal_Russian    105711.349  105711.349   50338.738   50338.738
+
+
+----    111 VARIABLE z.L                   =  2.336228E+7  total profit
+
+
+EXECUTION TIME       =        0.156 SECONDS      4 MB  37.1.0 r07954d5 WEX-WEI
+
+
+USER: GAMS Demo license for Burak Bakir              G220130|0002CO-GEN
+      METU, Turkey                                             DL059068
+
+
+**** FILE SUMMARY
+
+Input      C:\Users\Burak Baki\Dropbox\My PC (LAPTOP-U51KKDVC)\Desktop\Case Group 38.gms
+Output     C:\Users\Burak Baki\Dropbox\My PC (LAPTOP-U51KKDVC)\Desktop\Case Group 38.lst
